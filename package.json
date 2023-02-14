@@ -1,0 +1,27 @@
+{
+  "name": "one-worker",
+  "version": "0.0.1",
+  "description": "Enjoy the power of multi-threading with one Web Worker / Service Worker definition and once only.",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeffswt/one-worker.git"
+  },
+  "keywords": [
+    "thread",
+    "worker",
+    "pool",
+    "parallel",
+    "multithreading",
+    "worker_threads"
+  ],
+  "author": "Geoffrey Tang",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jeffswt/one-worker/issues"
+  },
+  "homepage": "https://github.com/jeffswt/one-worker"
+}
