@@ -1,3 +1,8 @@
+/**
+ * Implementation for a robust, asynchronous semaphore.
+ *
+ * @link https://en.wikipedia.org/wiki/Semaphore_(programming)
+ */
 export class AsyncSemaphore {
   /** Current resources available in this semaphore. */
   private _current: number;
