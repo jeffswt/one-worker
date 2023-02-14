@@ -23,5 +23,8 @@
   "bugs": {
     "url": "https://github.com/jeffswt/one-worker/issues"
   },
-  "homepage": "https://github.com/jeffswt/one-worker"
+  "homepage": "https://github.com/jeffswt/one-worker",
+  "devDependencies": {
+    "prettier": "^2.8.4"
+  }
 }
