@@ -13,10 +13,10 @@ import { AsyncSemaphore } from "./semaphore";
  */
 export class AsyncNotifier<T extends any = never> {
   /** All ongoing {@link wait} calls expect information from this driver. */
-  driver: NotifierDriver<T>;
+  _driver: NotifierDriver<T>;
 
   constructor() {
-    this.driver = {
+    this._driver = {
       semaphore: new AsyncSemaphore(0),
       message: undefined,
     };
@@ -29,8 +29,8 @@ export class AsyncNotifier<T extends any = never> {
    * @returns The message content.
    */
   async wait(): Promise<T> {
-    const driver = this.driver;
-    await this.driver.semaphore.wait();
+    const driver = this._driver;
+    await this._driver.semaphore.wait();
     return driver.message!;
   }
 
@@ -44,8 +44,8 @@ export class AsyncNotifier<T extends any = never> {
    *        premature notice.
    */
   async notify(message: T): Promise<void> {
-    const currentDriver = this.driver;
-    this.driver = {
+    const currentDriver = this._driver;
+    this._driver = {
       semaphore: new AsyncSemaphore(0),
       message: undefined,
     };
