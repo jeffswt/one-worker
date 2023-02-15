@@ -1,21 +1,33 @@
 /**
- * Implementation for a robust, asynchronous semaphore.
+ * Implementation for a robust, asynchronous semaphore. The semaphore could be
+ * provided with an optional {@link capacity}, without which {@link signal}
+ * calls won't be blocked.
  *
  * @link https://en.wikipedia.org/wiki/Semaphore_(programming)
  */
 export class AsyncSemaphore {
   /** Current resources available in this semaphore. */
   private _current: number;
-  /** A waiting list of all callbacks pending for resources. */
-  private _pending: Resolve[];
+  /** Maximum allowed resources in this semaphore. */
+  private _capacity: number | undefined;
+  /** A waiting list of all {@link wait} callbacks pending for resources. */
+  private _pendingWait: Resolve[];
+  /** A waiting list of all {@link signal} callbacks pending for release. */
+  private _pendingSignal: Resolve[];
 
-  constructor(initial: number) {
+  constructor(initial: number, capacity?: number | undefined) {
     // validate values so that they don't exceed the assumptions
+    if (capacity !== undefined && capacity < 0)
+      throw TypeError(`semaphore capacity cannot be sub-zero: ${capacity}`);
     if (initial < 0)
       throw TypeError(`initial resources cannot be sub-zero: ${initial}`);
+    if (capacity !== undefined && initial > capacity)
+      throw TypeError(`too many initial resources: ${initial} > ${capacity}`);
     // assign values to current status
     this._current = initial;
-    this._pending = [];
+    this._capacity = capacity;
+    this._pendingWait = [];
+    this._pendingSignal = [];
   }
 
   /**
@@ -28,30 +40,56 @@ export class AsyncSemaphore {
    *       as the *P* primitive.
    */
   async wait(): Promise<void> {
-    // single-threaded js guarantees atomicity
-    if (this._current >= 1) {
-      this._current -= 1;
+    return new Promise((resolve) => this._waitImpl(resolve));
+  }
+
+  private _waitImpl(resolve: Resolve): void {
+    // there be `signal`s waiting for limit uncap
+    if (this._pendingSignal.length > 0) {
+      const pending = this._pendingSignal.shift()!;
+      pending();
+      resolve();
       return;
     }
-    // need continuation from signal caller
-    return new Promise((resolve) => this._pending.push(resolve));
+    // non-blocking situation
+    if (this._current >= 1) {
+      this._current -= 1;
+      resolve();
+      return;
+    }
+    // continuation must be unlocked by a signal
+    this._pendingWait.push(resolve);
+    return;
   }
 
   /**
-   * Releases an available resource into the semaphore. If other user threads
-   * are {@link wait}ing for this resource, this operation will release exactly
-   * 1 pending user thread.
+   * Releases an available resource into the semaphore. Current user thread
+   * (async) will be blocked by this semaphore if no more empty space are
+   * available (i.e. semaphore value reaches capacity), until other user
+   * threads consumes enough resources with {@link wait}.
    *
    * @note Increments the value of semaphore variable by 1, this is also known
    *       as the *V* primitive.
    */
   async signal(): Promise<void> {
-    if (this._pending.length > 0) {
-      const resolve = this._pending.shift()!;
+    return new Promise((resolve) => this._signalImpl(resolve));
+  }
+
+  private _signalImpl(resolve: Resolve): void {
+    // there be `wait`s pending for resources
+    if (this._pendingWait.length > 0) {
+      const pending = this._pendingWait.shift()!;
+      pending();
       resolve();
-    } else {
-      this._current += 1;
+      return;
     }
+    // there's no reason to wait
+    if (this._capacity === undefined || this._current + 1 <= this._capacity) {
+      this._current += 1;
+      return;
+    }
+    // continuation must be unlocked by a wait
+    this._pendingSignal.push(resolve);
     return;
   }
 
@@ -63,15 +101,21 @@ export class AsyncSemaphore {
    * @param count Number of times to call {@link signal} in a row.
    */
   async signalMany(count: number): Promise<void> {
-    for (; count > 0; count--) {
-      // early leave because there's no more pending tasks
-      if (this._pending.length <= 0) {
-        this._current += count;
+    while (count >= 1) {
+      await this.signal();
+      count -= 1;
+      // dump all the rest if there's no waiting
+      if (this._pendingWait.length <= 0) {
+        let dump = count;
+        if (this._capacity !== undefined)
+          dump = Math.max(dump, this._capacity - this._current);
+        this._current += dump;
         break;
       }
-      // still have to take the signal path
-      const resolve = this._pending.shift()!;
-      resolve();
+    }
+    // when there's still remaining, we need to patiently wait for `wait`s
+    for (; count > 0; count--) {
+      await this.signal();
     }
     return;
   }
@@ -79,15 +123,14 @@ export class AsyncSemaphore {
   /**
    * Similar to {@link signal}, but releases all pending user threads on
    * {@link wait}. The semaphore is then set to a sufficiently large value
-   * after these user threads are released.
+   * (or the capacity if is capped) after these user threads are released.
    */
   async free(): Promise<void> {
-    while (this._pending.length > 0) {
-      const resolve = this._pending.shift()!;
-      resolve();
+    while (this._pendingWait.length > 0) {
+      await this.signal();
     }
     const infinity = 1073741823;
-    this._current += infinity;
+    this._current = this._capacity ?? infinity;
   }
 }
 
