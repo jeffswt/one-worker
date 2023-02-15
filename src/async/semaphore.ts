@@ -43,6 +43,22 @@ export class AsyncSemaphore {
     return new Promise((resolve) => this._waitImpl(resolve));
   }
 
+  /**
+   * Attempt to request a resource from the semaphore. If no resource is
+   * available at the moment (requires waiting), return `false`.
+   *
+   * @note Although it is always guaranteed that the return result reflects
+   *       the resource acquisition status, it is not guaranteed that this
+   *       function returns immediately.
+   */
+  async tryWait(): Promise<boolean> {
+    if (this._current <= 0) {
+      return false;
+    }
+    await this.wait();
+    return true;
+  }
+
   private _waitImpl(resolve: Resolve): void {
     // there be `signal`s waiting for limit uncap
     if (this._pendingSignal.length > 0) {
