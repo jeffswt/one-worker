@@ -25,4 +25,9 @@ export class AsyncMutex {
   async release(): Promise<void> {
     return this._semaphore.signal();
   }
+
+  /** Disrupt mutex, making it no longer blocking. */
+  async free(): Promise<void> {
+    return this._semaphore.free();
+  }
 }
