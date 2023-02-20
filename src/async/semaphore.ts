@@ -102,6 +102,7 @@ export class AsyncSemaphore {
     // there's no reason to wait
     if (this._capacity === undefined || this._current + 1 <= this._capacity) {
       this._current += 1;
+      resolve();
       return;
     }
     // continuation must be unlocked by a wait
