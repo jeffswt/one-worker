@@ -24,7 +24,7 @@ export function expectsTimeout(func: () => Promise<void>): {
   // wrap up the timeout catchers
   async function raceRunner(timeoutMs: number) {
     const x = await Promise.race([taskRunner(), timeoutRunner(timeoutMs)]);
-    if (fulfilled[0] !== false) throw Error("function did not timeout");
+    expect(fulfilled[0]).toBe(false);
   }
   return {
     in: raceRunner,

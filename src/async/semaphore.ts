@@ -91,6 +91,17 @@ export class AsyncSemaphore {
     return new Promise((resolve) => this._signalImpl(resolve));
   }
 
+  /**
+   * See {@link tryWait} as to {@link wait}.
+   */
+  async trySignal(): Promise<boolean> {
+    if (this._capacity !== undefined && this._current >= this._capacity) {
+      return false;
+    }
+    await this.signal();
+    return true;
+  }
+
   private _signalImpl(resolve: Resolve): void {
     // there be `wait`s pending for resources
     if (this._pendingWait.length > 0) {
@@ -127,6 +138,7 @@ export class AsyncSemaphore {
         if (this._capacity !== undefined)
           dump = Math.max(dump, this._capacity - this._current);
         this._current += dump;
+        count -= dump;
         break;
       }
     }
