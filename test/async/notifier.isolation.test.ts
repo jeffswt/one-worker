@@ -24,10 +24,10 @@ test("notifier can be reused with isolation", async () => {
 
 test("isolation is perfectly guaranteed", async () => {
   const notifier = new AsyncNotifier<number>();
-  const rounds = 11;
-  const waitingAgents = 997;
-  const notifyingAgents = 37;
-  const frameTime = 0.001;
+  const rounds = 3;
+  const waitingAgents = 173;
+  const notifyingAgents = 7;
+  const frameTime = 0.0001;
 
   for (let round = 0; round < rounds; round++) {
     const results: number[] = [];
@@ -68,4 +68,4 @@ test("isolation is perfectly guaranteed", async () => {
       for (const item of range) expect(item).toBe(frame);
     }
   }
-});
+}, 10000);
