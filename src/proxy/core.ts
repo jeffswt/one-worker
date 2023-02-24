@@ -20,19 +20,11 @@ export function createUnionResult<T, R>(
     _fallback: fallback,
   };
   const proxy = new Proxy(_aggregate, {
-    get(aggregate, key, receiver) {
+    get(aggregate, key) {
       if (key === "then" || key === "catch" || key === "finally")
-        return (...args: unknown[]) =>
-          (aggregate._promise[key] as (...args: unknown[]) => unknown).apply(
-            aggregate._promise,
-            args
-          );
+        return aggregate._promise[key].bind(aggregate._promise);
       if (key === "next" || key === "return" || key === "throw")
-        return (...args: unknown[]) =>
-          (aggregate._generator[key] as (...args: unknown[]) => unknown).apply(
-            aggregate._generator,
-            args
-          );
+        return aggregate._generator[key].bind(aggregate._generator);
       if (key === Symbol.asyncIterator) return () => aggregate._generator;
       return aggregate._fallback(key);
     },
