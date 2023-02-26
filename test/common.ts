@@ -5,6 +5,7 @@ import { sleep } from "../src/async/time";
  * detections).
  *
  * @example expectsTimeout(yourFunc).in(1000);
+ * @internal
  */
 export function expectsTimeout(func: () => Promise<void>): {
   in: (timeoutMs: number) => Promise<void>;
@@ -29,4 +30,19 @@ export function expectsTimeout(func: () => Promise<void>): {
   return {
     in: raceRunner,
   };
+}
+
+/**
+ * Checks if two types are equivalent (or not) to each other.
+ *
+ * @param eq Expects them to be equal (`true`) or not (`false`).
+ * @example expectTypesEq<number, number>();
+ *          expectTypesEq<string, Date>(false);
+ * @internal
+ */
+export function expectTypesEq<A = [never, 0], B = [never, 1]>(
+  ...args: [A] extends [B] ? ([B] extends [A] ? [] : [eq: false]) : [eq: false]
+): void {
+  void args;
+  return;
 }

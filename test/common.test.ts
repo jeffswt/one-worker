@@ -1,5 +1,5 @@
 import { sleep } from "../src/async/time";
-import { expectsTimeout } from "./common";
+import { expectsTimeout, expectTypesEq } from "./common";
 
 test("detects expected timeout", async () => {
   await expectsTimeout(async () => {
@@ -16,4 +16,11 @@ test("raises error on premature finish", async () => {
     return;
   }
   expect(true).toBe("failed to detect non-timeout");
+});
+
+test("type equivalence check works", () => {
+  expectTypesEq<number, number>();
+  expectTypesEq<string, Date>(false);
+  // @ts-expect-error(2345): types must be provided
+  expectTypesEq();
 });
