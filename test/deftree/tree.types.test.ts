@@ -81,6 +81,7 @@ test("reject invalid types on the tree", () => {
     },
   };
   // output type expected to be
+  type z = DefTreeAcceptableTree<typeof tree>;
   type Converted = {
     a: {
       aa: never;
@@ -90,4 +91,71 @@ test("reject invalid types on the tree", () => {
   };
   // they should equal
   expectTypesEq<DefTreeAcceptableTree<typeof tree>, Converted>();
+});
+
+test("tree can stretch up to 16 levels", async () => {
+  class TheClass {
+    async foo(): Promise<number> {
+      return Promise.resolve(12345);
+    }
+  }
+  // the input type
+  const tree = {
+    level_0: {
+      level_1: {
+        level_2: {
+          level_3: {
+            level_4: {
+              level_5: {
+                level_6: {
+                  level_7: {
+                    level_8: {
+                      level_9: {
+                        level_a: {
+                          level_b: {
+                            level_c: {
+                              level_d: {
+                                level_e: {
+                                  level_f: {
+                                    TheClass,
+                                  },
+                                  TheClass,
+                                },
+                                TheClass,
+                              },
+                              TheClass,
+                            },
+                            TheClass,
+                          },
+                          TheClass,
+                        },
+                        TheClass,
+                      },
+                      TheClass,
+                    },
+                    TheClass,
+                  },
+                  TheClass,
+                },
+                TheClass,
+              },
+              TheClass,
+            },
+            TheClass,
+          },
+          TheClass,
+        },
+        TheClass,
+      },
+      TheClass,
+    },
+    TheClass,
+  };
+  // this type is already 'acceptable'
+  expectTypesEq<DefTreeAcceptableTree<typeof tree>, typeof tree>();
+  // try and get a value to ensure the compiler doesn't fake this equality
+  const converted: DefTreeAcceptableTree<typeof tree> = tree;
+  const cls =
+    new converted.level_0.level_1.level_2.level_3.level_4.level_5.level_6.level_7.level_8.level_9.level_a.level_b.level_c.level_d.level_e.level_f.TheClass();
+  expect(await cls.foo()).toBe(12345);
 });

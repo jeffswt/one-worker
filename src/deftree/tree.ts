@@ -1,9 +1,13 @@
-import { DefTreeAcceptableClass } from "./class";
+import { DefTreeAcceptableClass, IsDefTreeAcceptableClass } from "./class";
 import {
   DefTreeAcceptableAsyncFunction,
   DefTreeAcceptableAsyncGenerator,
-  DefTreeAcceptableGenerator,
   DefTreeAcceptableFunction,
+  DefTreeAcceptableGenerator,
+  IsDefTreeAcceptableAsyncFunction,
+  IsDefTreeAcceptableAsyncGenerator,
+  IsDefTreeAcceptableFunction,
+  IsDefTreeAcceptableGenerator,
 } from "./func";
 
 /**
@@ -19,18 +23,18 @@ import {
  * @internal
  */
 export type DefTreeAcceptableTree<T> =
-  DefTreeAcceptableAsyncFunction<T> extends never
-    ? DefTreeAcceptableAsyncGenerator<T> extends never
-      ? DefTreeAcceptableGenerator<T> extends never
-        ? DefTreeAcceptableFunction<T> extends never
-          ? DefTreeAcceptableClass<T> extends never
-            ? T extends Record<string, any>
-              ? {
-                  [key in keyof T]: DefTreeAcceptableTree<T[key]>;
-                }
-              : never
-            : DefTreeAcceptableClass<T>
-          : DefTreeAcceptableFunction<T>
-        : DefTreeAcceptableGenerator<T>
-      : DefTreeAcceptableAsyncGenerator<T>
-    : DefTreeAcceptableAsyncFunction<T>;
+  IsDefTreeAcceptableAsyncFunction<T> extends true
+    ? DefTreeAcceptableAsyncFunction<T>
+    : IsDefTreeAcceptableAsyncGenerator<T> extends true
+    ? DefTreeAcceptableAsyncGenerator<T>
+    : IsDefTreeAcceptableGenerator<T> extends true
+    ? DefTreeAcceptableGenerator<T>
+    : IsDefTreeAcceptableFunction<T> extends true
+    ? DefTreeAcceptableFunction<T>
+    : IsDefTreeAcceptableClass<T> extends true
+    ? DefTreeAcceptableClass<T>
+    : T extends Record<string, any>
+    ? {
+        [key in keyof T]: DefTreeAcceptableTree<T[key]>;
+      }
+    : never;
