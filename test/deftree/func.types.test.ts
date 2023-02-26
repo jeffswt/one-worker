@@ -4,6 +4,10 @@ import {
   DefTreeAcceptableAsyncGenerator,
   DefTreeAcceptableFunction,
   DefTreeAcceptableGenerator,
+  IsDefTreeAcceptableAsyncFunction,
+  IsDefTreeAcceptableAsyncGenerator,
+  IsDefTreeAcceptableFunction,
+  IsDefTreeAcceptableGenerator,
 } from "../../src/deftree/func";
 import { expectTypesEq } from "../common";
 
@@ -14,6 +18,10 @@ test("functions can be converted to async", () => {
   function foo2(a: number, b: string[]) {
     return new Date();
   }
+
+  expectTypesEq<IsDefTreeAcceptableFunction<typeof foo1>, true>();
+  expectTypesEq<IsDefTreeAcceptableFunction<typeof foo2>, true>();
+
   expectTypesEq<DefTreeAcceptableFunction<typeof foo1>, () => Promise<void>>();
   expectTypesEq<
     DefTreeAcceptableFunction<typeof foo2>,
@@ -28,6 +36,10 @@ test("async functions are accepted in-place", () => {
   async function foo2(a: number, b: string[]) {
     return Promise.resolve(new Date());
   }
+
+  expectTypesEq<IsDefTreeAcceptableAsyncFunction<typeof foo1>, true>();
+  expectTypesEq<IsDefTreeAcceptableAsyncFunction<typeof foo2>, true>();
+
   expectTypesEq<
     DefTreeAcceptableAsyncFunction<typeof foo1>,
     () => Promise<void>
@@ -47,6 +59,10 @@ test("generators can be converted to async", () => {
     yield [2333];
     return "?";
   }
+
+  expectTypesEq<IsDefTreeAcceptableGenerator<typeof foo1>, true>();
+  expectTypesEq<IsDefTreeAcceptableGenerator<typeof foo2>, true>();
+
   expectTypesEq<
     DefTreeAcceptableGenerator<typeof foo1>,
     () => AsyncGenerator<undefined, void>
@@ -68,6 +84,10 @@ test("async generators are accepted in-place", () => {
     yield [2333];
     return "?";
   }
+
+  expectTypesEq<IsDefTreeAcceptableAsyncGenerator<typeof foo1>, true>();
+  expectTypesEq<IsDefTreeAcceptableAsyncGenerator<typeof foo2>, true>();
+
   expectTypesEq<
     DefTreeAcceptableAsyncGenerator<typeof foo1>,
     () => AsyncGenerator<undefined, void>
@@ -80,6 +100,12 @@ test("async generators are accepted in-place", () => {
 
 test("invalid values are rejected by converters", () => {
   const bar = 12345;
+
+  expectTypesEq<IsDefTreeAcceptableAsyncFunction<typeof bar>, false>();
+  expectTypesEq<IsDefTreeAcceptableAsyncGenerator<typeof bar>, false>();
+  expectTypesEq<IsDefTreeAcceptableFunction<typeof bar>, false>();
+  expectTypesEq<IsDefTreeAcceptableGenerator<typeof bar>, false>();
+
   expectTypesEq<DefTreeAcceptableFunction<typeof bar>, never>();
   expectTypesEq<DefTreeAcceptableAsyncFunction<typeof bar>, never>();
   expectTypesEq<DefTreeAcceptableGenerator<typeof bar>, never>();

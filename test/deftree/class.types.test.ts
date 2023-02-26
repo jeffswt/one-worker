@@ -2,6 +2,7 @@ import { sleep } from "../../src/async/time";
 import {
   DefTreeAcceptableClass,
   DefTreeAcceptableInstance,
+  IsDefTreeAcceptableClass,
 } from "../../src/deftree/class";
 import { expectTypesEq } from "../common";
 
@@ -23,8 +24,11 @@ test("valid classes are accepted", () => {
     }
   }
   const instance = new Class(true, null);
+
   expectTypesEq<DefTreeAcceptableClass<typeof Class>, typeof Class>();
   expectTypesEq<DefTreeAcceptableInstance<typeof instance>, typeof instance>();
+
+  expectTypesEq<IsDefTreeAcceptableClass<typeof Class>, true>();
 });
 
 test("can convert non-async class methods", () => {
@@ -52,6 +56,7 @@ test("can convert non-async class methods", () => {
     }
   }
   const instance = new Class(true, null);
+
   expectTypesEq<
     DefTreeAcceptableClass<typeof Class>,
     {
@@ -72,13 +77,18 @@ test("can convert non-async class methods", () => {
       asyncBar: (b: string) => AsyncGenerator<Date, number[]>;
     }
   >();
+
+  expectTypesEq<IsDefTreeAcceptableClass<typeof Class>, true>();
 });
 
 test("empty-constructors & empty-classes are allowed", () => {
   class Class {}
   const instance = new Class();
+
   expectTypesEq<DefTreeAcceptableClass<typeof Class>, typeof Class>();
   expectTypesEq<DefTreeAcceptableInstance<typeof instance>, typeof instance>();
+
+  expectTypesEq<IsDefTreeAcceptableClass<typeof Class>, true>();
 });
 
 test("rejects invalid classes", () => {
@@ -90,6 +100,19 @@ test("rejects invalid classes", () => {
     }
   }
   const instance = new Class(true, null);
+
   expectTypesEq<DefTreeAcceptableClass<typeof Class>, never>();
   expectTypesEq<DefTreeAcceptableInstance<typeof instance>, never>();
+
+  expectTypesEq<IsDefTreeAcceptableClass<typeof Class>, true>();
+});
+
+test("rejects non-classes", () => {
+  // since functions are effectively objects, but are validated before classes
+  // are, we aren't testing the negativity on functions here
+  const bar = 0;
+
+  expectTypesEq<DefTreeAcceptableClass<typeof bar>, never>();
+
+  expectTypesEq<IsDefTreeAcceptableClass<typeof bar>, false>();
 });

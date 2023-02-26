@@ -3,6 +3,10 @@ import {
   DefTreeAcceptableAsyncGenerator,
   DefTreeAcceptableFunction,
   DefTreeAcceptableGenerator,
+  IsDefTreeAcceptableAsyncFunction,
+  IsDefTreeAcceptableAsyncGenerator,
+  IsDefTreeAcceptableFunction,
+  IsDefTreeAcceptableGenerator,
 } from "./func";
 
 /**
@@ -33,6 +37,15 @@ export type DefTreeAcceptableClass<T> = T extends {
   ? CreateClass<T, never, Instance, DefTreeAcceptableInstance<Instance>>
   : never;
 
+/** @internal {@link DefTreeAcceptableClass} */
+export type IsDefTreeAcceptableClass<T> = T extends {
+  new (...args: infer Args): infer Instance;
+}
+  ? true
+  : T extends { prototype: infer Instance }
+  ? true
+  : false;
+
 /** @internal Compose new constructor and use the original when possible. */
 type CreateClass<
   Class,
@@ -55,6 +68,8 @@ type CreateClassWith<
 
 /**
  * Converts a class instance to its proxy-able counterpart.
+ *
+ * @internal
  */
 export type DefTreeAcceptableInstance<T> = T extends { [key: string]: any }
   ? ConvertFields<T> extends infer Converted
@@ -91,14 +106,14 @@ type ConvertFields<T> = {
 };
 
 /** @internal Convert object property in a specific order. */
-type ConvertField<T> = DefTreeAcceptableAsyncFunction<T> extends never
-  ? DefTreeAcceptableAsyncGenerator<T> extends never
-    ? DefTreeAcceptableGenerator<T> extends never
-      ? DefTreeAcceptableFunction<T> extends never
-        ? never
-        : DefTreeAcceptableFunction<T>
-      : DefTreeAcceptableGenerator<T>
-    : DefTreeAcceptableAsyncGenerator<T>
-  : DefTreeAcceptableAsyncFunction<T>;
+type ConvertField<T> = IsDefTreeAcceptableAsyncFunction<T> extends true
+  ? DefTreeAcceptableAsyncFunction<T>
+  : IsDefTreeAcceptableAsyncGenerator<T> extends true
+  ? DefTreeAcceptableAsyncGenerator<T>
+  : IsDefTreeAcceptableGenerator<T> extends true
+  ? DefTreeAcceptableGenerator<T>
+  : IsDefTreeAcceptableFunction<T> extends true
+  ? DefTreeAcceptableFunction<T>
+  : never;
 
 type ValueOf<T> = T[keyof T];
