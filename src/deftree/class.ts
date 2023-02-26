@@ -9,8 +9,8 @@ import {
  * Converts a class definition (i.e. the one defined with a constructor) to its
  * proxy-able counterpart. The conversion should follow these rules:
  *
- *  - All publicly accessible property keys must be strings (which means that
- *    you should never use symbol keys for special purposes).
+ *  - All publicly accessible property keys must be strings (symbols cannot be
+ *    used since they are not 'Structured-clone'-able).
  *  - If a property of this instance is a method, it will be converted to the
  *    proper 'proxy-able' counterpart.
  *  - When all properties are asynchronous methods and does not require a
