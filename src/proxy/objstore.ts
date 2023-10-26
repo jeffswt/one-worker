@@ -1,5 +1,6 @@
 import { ObjectID } from "../network/protocol";
-import { Option } from "../util/types";
+import { createUniqueId } from "../util/crypto";
+import { None, Option, Some } from "../util/types";
 
 /**
  * Stores all the data within any single thread that may be accessible by other
@@ -39,13 +40,17 @@ export interface IStrongObjectStore {
 
 export const ShadowHandleKey = Symbol("ShadowHandleKey");
 
+export interface IShadowHandleKey {
+  id: ObjectID;
+}
+
 export interface IShadowHandle {
   /**
    * The ID of the actual object on another server. The value of this entry is
    * so given to keep hold of the garbage collection in the event of an object
    * spread (albeit being extremely rare and unlikely to be possible).
    */
-  readonly [ShadowHandleKey]: { id: ObjectID };
+  readonly [ShadowHandleKey]: IShadowHandleKey;
 }
 
 /**
@@ -69,4 +74,87 @@ export interface IWeakObjectStore {
 
   /** @see {@link IStrongObjectStore.getRefUpdates} */
   getRefUpdates(): Record<ObjectID, boolean>;
+}
+
+export class StrongObjectStore implements IStrongObjectStore {
+  /** Simply a directory of objects. */
+  private _storage: Record<ObjectID, any>;
+  /** Reports ref deltas. */
+  private _nextRefUpdate: Record<ObjectID, boolean>;
+
+  constructor() {
+    this._storage = {};
+    this._nextRefUpdate = {};
+  }
+
+  insert<T = any>(item: T): ObjectID {
+    const id = createUniqueId();
+    this._storage[id] = item;
+    this._nextRefUpdate[id] = true;
+    return id;
+  }
+
+  query<T = any>(id: ObjectID): Option<T> {
+    if (!(id in this._storage)) return None();
+    return Some(this._storage[id] as T);
+  }
+
+  updateRefs(refs: Record<string, number>): void {
+    // if any ref is only ref'd by only one thread, then that is me
+    for (const id of Object.keys(this._storage))
+      if ((refs[id] ?? 0) < 2) {
+        delete this._storage[id];
+        this._nextRefUpdate[id] = false;
+      }
+    return;
+  }
+
+  getRefUpdates(): Record<string, boolean> {
+    const updates = this._nextRefUpdate;
+    this._nextRefUpdate = {};
+    return updates;
+  }
+}
+
+export class WeakObjectStore implements IWeakObjectStore {
+  /** A storage of object handles. They are weak references to the handles. */
+  private _storage: Record<ObjectID, WeakRef<IShadowHandleKey>>;
+  /** Monitoring garbage collector on handle keys. */
+  private _gcWatcher: FinalizationRegistry<ObjectID>;
+  /** Reports ref deltas. */
+  private _nextRefUpdate: Record<ObjectID, boolean>;
+
+  constructor() {
+    this._storage = {};
+    this._gcWatcher = new FinalizationRegistry((id) => {
+      delete this._storage[id];
+      this._nextRefUpdate[id] = false;
+    });
+    this._nextRefUpdate = {};
+  }
+
+  insert(id: string): IShadowHandle {
+    const key: IShadowHandleKey = { id: id };
+    this._storage[id] = new WeakRef(key);
+    this._gcWatcher.register(key, id);
+    this._nextRefUpdate[id] = true;
+    return { [ShadowHandleKey]: key };
+  }
+
+  query(id: string): IShadowHandle | undefined {
+    const handle = this._storage[id]?.deref();
+    if (handle === undefined) return undefined;
+    return { [ShadowHandleKey]: handle };
+  }
+
+  updateRefs(refs: Record<string, number>): void {
+    // shadow stores rely only on themselves
+    return;
+  }
+
+  getRefUpdates(): Record<string, boolean> {
+    const updates = this._nextRefUpdate;
+    this._nextRefUpdate = {};
+    return updates;
+  }
 }
