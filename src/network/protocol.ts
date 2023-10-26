@@ -1,5 +1,8 @@
 import { UUID } from "../util/uuid";
 
+///////////////////////////////////////////////////////////////////////////////
+//  shared types
+
 /** @internal Identifies a worker ('server'). */
 export type ServerID = number;
 
@@ -17,6 +20,56 @@ export type TransactionID = UUID;
  *           through a proxy.
  */
 export type ObjectID = UUID;
+
+///////////////////////////////////////////////////////////////////////////////
+//  exposed interface
+
+/**
+ * Interact upon a 1-to-1 direct connection against another server. Each call
+ * will invoke exactly 1 transaction.
+ */
+export interface INetworkRequestAgent {
+  construct(
+    req: ConstructRequest
+  ): Promise<ConstructOKResponse | ConstructFailResponse>;
+  invoke(req: InvokeRequest): Promise<InvokeOKResponse | InvokeFailResponse>;
+  promiseThen(
+    req: PromiseThenRequest
+  ): Promise<PromiseResolveResponse | PromiseRejectResponse>;
+  generatorNext(
+    req: GeneratorNextRequest
+  ): Promise<
+    GeneratorNextResponse | GeneratorFinishResponse | GeneratorThrowResponse
+  >;
+  generatorReturn(req: GeneratorReturnRequest): Promise<void>;
+  generatorThrow(req: GeneratorThrowRequest): Promise<void>;
+  refBroadcast(req: RefBroadcastRequest): Promise<RefReplyResponse>;
+}
+
+/**
+ * Passively listen to incoming transactions from other servers. Each call will
+ * be replied with exactly 1 result or 1 stream depending on the situation.
+ */
+export interface INetworkResponseAgent {
+  onConstruct(
+    res: ConstructRequest
+  ): Promise<ConstructOKResponse | ConstructFailResponse>;
+  onInvoke(res: InvokeRequest): Promise<InvokeOKResponse | InvokeFailResponse>;
+  onPromiseThen(
+    res: PromiseThenRequest
+  ): Promise<PromiseResolveResponse | PromiseRejectResponse>;
+  onGeneratorNext(
+    res: GeneratorNextRequest
+  ): Promise<
+    GeneratorNextResponse | GeneratorFinishResponse | GeneratorThrowResponse
+  >;
+  onGeneratorReturn(res: GeneratorReturnRequest): Promise<void>;
+  onGeneratorThrow(res: GeneratorThrowRequest): Promise<void>;
+  onRefBroadcast(res: RefBroadcastRequest): Promise<RefReplyResponse>;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  request stage
 
 /** @internal Protocol request message type. */
 export type NetworkRequestMessage =
@@ -39,7 +92,7 @@ export enum NetworkRequestMessageType {
   RefBroadcast = 0x010501,
 }
 
-type ConstructRequest = {
+export type ConstructRequest = {
   i: TransactionID;
   t: NetworkRequestMessageType.Construct;
 
@@ -58,7 +111,7 @@ type ConstructRequest = {
   a: any[];
 };
 
-type InvokeRequest = {
+export type InvokeRequest = {
   i: TransactionID;
   t: NetworkRequestMessageType.Invoke;
 
@@ -87,7 +140,7 @@ type InvokeRequest = {
   a: any[];
 };
 
-type PromiseThenRequest = {
+export type PromiseThenRequest = {
   i: TransactionID;
   t: NetworkRequestMessageType.PromiseThen;
 
@@ -99,7 +152,7 @@ type PromiseThenRequest = {
   r: ObjectID;
 };
 
-type GeneratorNextRequest = {
+export type GeneratorNextRequest = {
   i: TransactionID;
   t: NetworkRequestMessageType.GeneratorNext;
 
@@ -111,7 +164,7 @@ type GeneratorNextRequest = {
   r: ObjectID;
 };
 
-type GeneratorReturnRequest = {
+export type GeneratorReturnRequest = {
   i: TransactionID;
   t: NetworkRequestMessageType.GeneratorReturn;
 
@@ -122,7 +175,7 @@ type GeneratorReturnRequest = {
   a: any;
 };
 
-type GeneratorThrowRequest = {
+export type GeneratorThrowRequest = {
   i: TransactionID;
   t: NetworkRequestMessageType.GeneratorThrow;
 
@@ -133,7 +186,7 @@ type GeneratorThrowRequest = {
   e: Error;
 };
 
-type RefBroadcastRequest = {
+export type RefBroadcastRequest = {
   i: TransactionID;
   /**
    * The reference broadcast event must be issued by the master server since it
@@ -150,6 +203,9 @@ type RefBroadcastRequest = {
    */
   rs: { [id: ObjectID]: number };
 };
+
+///////////////////////////////////////////////////////////////////////////////
+//  response stage
 
 /** @internal Protocol response message type. */
 export type NetworkResponseMessage =
@@ -182,7 +238,7 @@ export enum NetworkResponseMessageType {
   RefReply = 0x020501,
 }
 
-type ConstructOKResponse = {
+export type ConstructOKResponse = {
   i: TransactionID;
   t: NetworkResponseMessageType.ConstructOK;
 
@@ -196,7 +252,7 @@ type ConstructOKResponse = {
   f: ObjectID;
 };
 
-type ConstructFailResponse = {
+export type ConstructFailResponse = {
   i: TransactionID;
   t: NetworkResponseMessageType.ConstructFail;
 
@@ -206,7 +262,7 @@ type ConstructFailResponse = {
   e: Error;
 };
 
-type InvokeOKResponse = {
+export type InvokeOKResponse = {
   i: TransactionID;
   t: NetworkResponseMessageType.InvokeOK;
 
@@ -219,7 +275,7 @@ type InvokeOKResponse = {
   f: ObjectID;
 };
 
-type InvokeFailResponse = {
+export type InvokeFailResponse = {
   i: TransactionID;
   t: NetworkResponseMessageType.InvokeFail;
 
@@ -230,7 +286,7 @@ type InvokeFailResponse = {
   e: Error;
 };
 
-type PromiseResolveResponse = {
+export type PromiseResolveResponse = {
   i: TransactionID;
   t: NetworkResponseMessageType.PromiseResolve;
 
@@ -241,7 +297,7 @@ type PromiseResolveResponse = {
   f: any;
 };
 
-type PromiseRejectResponse = {
+export type PromiseRejectResponse = {
   i: TransactionID;
   t: NetworkResponseMessageType.PromiseReject;
 
@@ -252,7 +308,7 @@ type PromiseRejectResponse = {
   e: Error;
 };
 
-type GeneratorNextResponse = {
+export type GeneratorNextResponse = {
   i: TransactionID;
   t: NetworkResponseMessageType.GeneratorNext;
 
@@ -264,7 +320,7 @@ type GeneratorNextResponse = {
   f: any;
 };
 
-type GeneratorFinishResponse = {
+export type GeneratorFinishResponse = {
   i: TransactionID;
   t: NetworkResponseMessageType.GeneratorFinish;
 
@@ -279,7 +335,7 @@ type GeneratorFinishResponse = {
   f: any;
 };
 
-type GeneratorThrowResponse = {
+export type GeneratorThrowResponse = {
   i: TransactionID;
   t: NetworkResponseMessageType.GeneratorThrow;
 
@@ -293,7 +349,7 @@ type GeneratorThrowResponse = {
   e: Error;
 };
 
-type RefReplyResponse = {
+export type RefReplyResponse = {
   i: TransactionID;
   t: NetworkResponseMessageType.RefReply;
 
