@@ -1,3 +1,4 @@
+import { createUniqueId } from "../util/crypto";
 import { UUID } from "../util/uuid";
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -23,6 +24,11 @@ export type ObjectID = UUID;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  exposed interface
+
+/** Generate new transaction ID. */
+export function newTransactionID(): TransactionID {
+  return createUniqueId();
+}
 
 /**
  * Interact upon a 1-to-1 direct connection against another server. Each call
