@@ -208,6 +208,19 @@ export type RefBroadcastRequest = {
    * Any object has at most 1 reference on any server.
    */
   rs: { [id: ObjectID]: number };
+
+  /**
+   * Announces that these objects are now known as an alias to another object
+   * hosted on another server. For example, server A may call an object β with
+   * an alias α, which is actually on server B, in the event that server A does
+   * not know whether object β exists or not. Eventually, when the name of 'β'
+   * got in the hands of server A, it'll announce that anyone in hold of the
+   * object α should now turn to call it β instead.
+   *
+   * It is guaranteed that an aliased object is always on a server different
+   * from the original one.
+   */
+  ls: { [id: ObjectID]: ObjectID };
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -360,9 +373,20 @@ export type RefReplyResponse = {
   t: NetworkResponseMessageType.RefReply;
 
   /**
-   * Announces that references to these objects on this server instance are
-   * altered by either adding a new reference (`true`) or dropping an existing
-   * reference (`false`, garbage collected).
+   * Announces that references to these objects physically hosted on this
+   * server instance are altered by either adding a new reference (`true`) or
+   * dropping an existing reference (`false`, garbage collected).
+   *
+   * The act of aliasing an object does not garbage collect it -- it transforms
+   * the ownership of the reference counter to the new object.
    */
   rs: { [id: ObjectID]: boolean };
+
+  /**
+   * Announces that object previously given aliases may now be directed to
+   * their true hosts on another server instance. Resolving (actually removing)
+   * aliases do not eliminate their reference counters -- they are merely
+   * transformed / delivered to the new object.
+   */
+  ls: { [id: ObjectID]: ObjectID };
 };

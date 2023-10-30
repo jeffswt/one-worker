@@ -6,6 +6,7 @@ import {
   newTransactionID,
   ObjectID,
 } from "../network/protocol";
+import { createUniqueId } from "../util/crypto";
 import { IWeakObjectStore } from "./objstore";
 import { createShadow, IShadow } from "./shadow";
 
@@ -55,7 +56,13 @@ export class WeakObjectHost implements IWeakObjectHost {
   }
 
   construct(self: ObjectID, args: any[]): IShadow {
-    return createShadow(this, undefined, async (shadow) => {
+    // create deferred handle
+    const objId = createUniqueId();
+    const handle = this._weakStore.insert(objId);
+    // TODO: what if [self] is already deferred?
+
+    // initialize object, but defer all further accesses
+    return createShadow(this, handle, async (shadow) => {
       const r = await this._channel.construct({
         i: newTransactionID(),
         t: NetworkRequestMessageType.Construct,
@@ -66,7 +73,12 @@ export class WeakObjectHost implements IWeakObjectHost {
   }
 
   invoke(self: ObjectID, bind: ObjectID, args: any[]): IShadow {
-    return createShadow(this, undefined, async (shadow) => {
+    // create deferred handle
+    const objId = createUniqueId();
+    const handle = this._weakStore.insert(objId);
+    // TODO: what if [self] is already deferred?
+
+    return createShadow(this, handle, async (shadow) => {
       const r = await this._channel.invoke({
         i: newTransactionID(),
         t: NetworkRequestMessageType.Invoke,
