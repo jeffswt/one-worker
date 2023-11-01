@@ -38,10 +38,13 @@ export interface IWeakObjectHost {
   generatorNext(self: ObjectID): Promise<IteratorResult<any, any> | never>;
 
   /** Force a return value on an `AsyncIterable` shadow. */
-  generatorReturn(self: ObjectID, returns: any): Promise<void>;
+  generatorReturn(
+    self: ObjectID,
+    returns: any
+  ): Promise<IteratorResult<any, any>>;
 
   /** Force an error on an `AsyncIterable` shadow. */
-  generatorThrow(self: ObjectID, error: any): Promise<void>;
+  generatorThrow(self: ObjectID, error: any): Promise<IteratorResult<any, any>>;
 }
 
 export class WeakObjectHost implements IWeakObjectHost {
@@ -62,7 +65,7 @@ export class WeakObjectHost implements IWeakObjectHost {
     // TODO: what if [self] is already deferred?
 
     // initialize object, but defer all further accesses
-    return createShadow(this, handle, async (shadow) => {
+    return createShadow(this, handle, async () => {
       const r = await this._channel.construct({
         i: newTransactionID(),
         t: NetworkRequestMessageType.Construct,
@@ -78,7 +81,7 @@ export class WeakObjectHost implements IWeakObjectHost {
     const handle = this._weakStore.insert(objId);
     // TODO: what if [self] is already deferred?
 
-    return createShadow(this, handle, async (shadow) => {
+    return createShadow(this, handle, async () => {
       const r = await this._channel.invoke({
         i: newTransactionID(),
         t: NetworkRequestMessageType.Invoke,
@@ -108,26 +111,32 @@ export class WeakObjectHost implements IWeakObjectHost {
       r: self,
     });
     if (r.t === NetworkResponseMessageType.GeneratorThrow) throw r.e;
-    else if (r.t === NetworkResponseMessageType.GeneratorFinish)
-      return { done: true, value: r.f };
-    else return { value: r.f };
+    else return { done: r.d, value: r.f };
   }
 
-  async generatorReturn(self: ObjectID, returns: any): Promise<void> {
-    await this._channel.generatorReturn({
+  async generatorReturn(
+    self: ObjectID,
+    returns: any
+  ): Promise<IteratorResult<any, any>> {
+    const r = await this._channel.generatorReturn({
       i: newTransactionID(),
       t: NetworkRequestMessageType.GeneratorReturn,
       r: self,
       a: returns,
     });
+    return { done: r.d, value: r.f };
   }
 
-  async generatorThrow(self: ObjectID, error: any): Promise<void> {
-    await this._channel.generatorThrow({
+  async generatorThrow(
+    self: ObjectID,
+    error: any
+  ): Promise<IteratorResult<any, any>> {
+    const r = await this._channel.generatorThrow({
       i: newTransactionID(),
       t: NetworkRequestMessageType.GeneratorThrow,
       r: self,
       e: error,
     });
+    return { done: r.d, value: r.f };
   }
 }

@@ -1,9 +1,6 @@
+import { createUnionResult } from "./core";
+import { IShadowHandle, ShadowHandleKey } from "./objstore";
 import { IWeakObjectHost } from "./weakhost";
-import { IShadowHandle } from "./objstore";
-import { AsyncNotifier } from "../async/notifier";
-
-/** @internal @private */
-export const ShadowKey = Symbol("ShadowImplKey");
 
 /**
  * All such objects are created by a {@link IWeakObjectHost}, such that a
@@ -24,25 +21,45 @@ export const ShadowKey = Symbol("ShadowImplKey");
  * at this time of its lifetime will incur two round trips, with this object
  * in the middle. In due course,
  */
-export interface IShadow extends IShadowHandle {
-  [ShadowKey]: {
-    /** The object host that created this shadow. */
-    h: IWeakObjectHost;
-
-    /**
-     * An asynchronous notifier telling deferred children to wake up after the
-     * deferred initialization had completed. Having this field 'undefined'
-     * means that this object is *not* deferred and you're safe to use its
-     * object ID as well as other properties.
-     */
-    d?: AsyncNotifier<number> | undefined;
-  };
-}
+export interface IShadow extends IShadowHandle {}
 
 export function createShadow(
   weakHost: IWeakObjectHost,
   handle: IShadowHandle,
-  deferredAction: (self: ShadowImpl) => Promise<void> | undefined
-): ShadowImpl {
-  return handle!; // TODO
+  deferredAction: () => Promise<void> | undefined
+): IShadow {
+  // TODO: create constructor
+
+  // create promise, this is easy
+  const shadowPromise = weakHost.promiseThen(handle[ShadowHandleKey].id);
+  // we need to mock the 'next' method of this gen
+  async function* shadowAsyncGenFunc(): AsyncGenerator<any, any> {
+    while (true) {
+      const next = await weakHost.generatorNext(handle[ShadowHandleKey].id);
+      if (next.done) return next.value;
+      yield next.value;
+    }
+  }
+  // and ensure the methods are captured
+  const shadowAsyncGen = shadowAsyncGenFunc();
+  shadowAsyncGen.return = async (val: any | PromiseLike<any>) => {
+    const id = handle[ShadowHandleKey].id;
+    const syncVal = await val;
+    const r = await weakHost.generatorReturn(id, syncVal);
+    return { done: r.done, value: r.value };
+  };
+  shadowAsyncGen.throw = async (err: any) => {
+    const id = handle[ShadowHandleKey].id;
+    const r = await weakHost.generatorThrow(id, err);
+    return { done: r.done, value: r.value };
+  };
+
+  // now fuse 'em together
+  // TODO: id is shadowed
+  const fused = createUnionResult(
+    shadowPromise,
+    shadowAsyncGen,
+    (key) => handle[key as keyof IShadowHandle]
+  );
+  return fused as unknown as IShadow;
 }
